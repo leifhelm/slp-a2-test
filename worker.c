@@ -36,6 +36,7 @@ int substr(char** line, char* substr) {
 
 void parseLine(char* line, event_t* event, vector_t* errors) {
   char* lineOrig = line;
+  error_t* error;
   if (!strcmp(line, "CAR WASH PARK OPENED!\n")) {
     event->type = EVENT_OPEN;
   } else if (!strcmp(line, "CAR WASH PARK CLOSED!\n")) {
@@ -102,7 +103,7 @@ void parseLine(char* line, event_t* event, vector_t* errors) {
     }
   } else {
   err:
-    error_t* error = vector_emplace_back(error_t, errors);
+    error = vector_emplace_back(error_t, errors);
     error->type = ERROR_PARSING;
     error->line = lineOrig;
   }
