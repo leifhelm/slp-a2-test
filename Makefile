@@ -22,7 +22,7 @@ slp-a2-test: $(C_FILES)
 format: $(ALL_FILES)
 	$(CLANG_FORMAT) -i $^
 
-check:: test-format
+check:: check-format
 check-format: $(ALL_FILES)
 	$(CLANG_FORMAT) -Werror -n $^
 
