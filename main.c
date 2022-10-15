@@ -5,9 +5,9 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sys/stat.h>
 #include <sys/wait.h>
 #include <unistd.h>
-#include <sys/stat.h>
 
 #define DEFAULT_COMMAND "./carwash"
 #define DEFAULT_NUM 10
@@ -138,17 +138,15 @@ void init_queue(job_queue* queue, cli_args* args) {
   }
 }
 
-void printProgress(size_t finished, size_t total, size_t failed){
+void printProgress(size_t finished, size_t total, size_t failed) {
   printf("[ %zu/%zu", finished, total);
-  if(failed)
+  if (failed)
     printf("; \x1B[1;31m%zu failed\1xB[0m", failed);
   printf(" ]");
   fflush(stdout);
 }
 
-void removeProgress(){
-  printf("\x1B[2K\x1B[G");
-}
+void removeProgress() { printf("\x1B[2K\x1B[G"); }
 
 int main(int argc, char* argv[]) {
   cli_args args;
@@ -176,7 +174,7 @@ int main(int argc, char* argv[]) {
     while (job->state != JOB_FINISHED) {
       pthread_cond_wait(&job->state_changed, &job->lock);
     }
-    if(job->result->result == FAIL)
+    if (job->result->result == FAIL)
       failed++;
     removeProgress();
     printResult(job, args.verbose);
@@ -184,17 +182,17 @@ int main(int argc, char* argv[]) {
     pthread_mutex_unlock(&job->lock);
   }
 
-
   for (size_t i = 0; i < args.workers; ++i) {
     pthread_join(workers[i].thread, NULL);
   }
 
   removeProgress();
   fflush(stdout);
-  if(failed == 0){
+  if (failed == 0) {
     printf("Ran %zu tests with \x1B[1;32m0\x1B[0m failures.\n", queue->size);
     return EXIT_SUCCESS;
   } else {
-    printf("Ran %zu tests with \x1V[1;31m%zu\x1B[0m failures.\n", queue->size, failed);
+    printf("Ran %zu tests with \x1V[1;31m%zu\x1B[0m failures.\n", queue->size,
+           failed);
   }
 }

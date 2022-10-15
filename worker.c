@@ -40,8 +40,8 @@ void runJob(worker* worker, job* job) {
     }
   }
   waitpid(pid, &result->exit_status, 0);
-  if(!WIFEXITED(result->exit_status) && WEXITSTATUS(result->exit_status)){
-      result->result = FAIL;
+  if (!WIFEXITED(result->exit_status) && WEXITSTATUS(result->exit_status)) {
+    result->result = FAIL;
   }
 }
 
