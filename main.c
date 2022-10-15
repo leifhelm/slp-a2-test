@@ -121,15 +121,15 @@ void parseArgs(char* command, char* args, char* (*args_array)[5]) {
   (*args_array)[4] = NULL;
 }
 
-void init_queue(job_queue* queue, cli_args* args) {
+void init_queue(job_queue_t* queue, cli_args* args) {
   queue->size = args->num;
   queue->next_job = 0;
-  queue->jobs = malloc(queue->size * sizeof(job));
+  queue->jobs = malloc(queue->size * sizeof(job_t));
   pthread_mutex_init(&queue->lock, NULL);
   char* args_array[5];
   parseArgs(args->command, args->args, &args_array);
   for (size_t i = 0; i < args->num; ++i) {
-    job* job = queue->jobs + i;
+    job_t* job = queue->jobs + i;
     memcpy(job->args, args_array, 5 * sizeof(char*));
     job->number = i;
     job->state = JOB_NEW;
@@ -141,7 +141,7 @@ void init_queue(job_queue* queue, cli_args* args) {
 void printProgress(size_t finished, size_t total, size_t failed) {
   printf("[ %zu/%zu", finished, total);
   if (failed)
-    printf("; \x1B[1;31m%zu failed\1xB[0m", failed);
+    printf("; \x1B[1;31m%zu failed\x1B[0m", failed);
   printf(" ]");
   fflush(stdout);
 }
@@ -154,11 +154,11 @@ int main(int argc, char* argv[]) {
   if (args.verbose) {
     printf("Testing \x1B[94m%s\x1B[0m\n", args.command);
   }
-  job_queue* queue = malloc(sizeof(job_queue));
+  job_queue_t* queue = malloc(sizeof(job_queue_t));
   init_queue(queue, &args);
-  worker* workers = malloc(args.workers * sizeof(worker));
+  worker_t* workers = malloc(args.workers * sizeof(worker_t));
   for (size_t i = 0; i < args.workers; ++i) {
-    worker* worker = workers + i;
+    worker_t* worker = workers + i;
     worker->id = i;
     worker->queue = queue;
     pthread_create(&worker->thread, NULL, ((void* (*) (void*) ) work), worker);
@@ -169,7 +169,7 @@ int main(int argc, char* argv[]) {
   printProgress(0, queue->size, 0);
   size_t failed = 0;
   for (size_t i = 0; i < queue->size; i++) {
-    job* job = queue->jobs + i;
+    job_t* job = queue->jobs + i;
     pthread_mutex_lock(&job->lock);
     while (job->state != JOB_FINISHED) {
       pthread_cond_wait(&job->state_changed, &job->lock);
@@ -192,7 +192,7 @@ int main(int argc, char* argv[]) {
     printf("Ran %zu tests with \x1B[1;32m0\x1B[0m failures.\n", queue->size);
     return EXIT_SUCCESS;
   } else {
-    printf("Ran %zu tests with \x1V[1;31m%zu\x1B[0m failures.\n", queue->size,
+    printf("Ran %zu tests with \x1B[1;31m%zu\x1B[0m failures.\n", queue->size,
            failed);
   }
 }
