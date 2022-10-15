@@ -9,7 +9,7 @@ C_FLAGS=-Wall -D_GNU_SOURCE -pthread
 
 CLANG_FORMAT=clang-format
 
-C_FILES=main.c vector.c worker.c invariants.c state.c
+C_FILES=main.c vector.c worker.c invariants.c state.c error.c
 H_FILES=vector.h worker.h invariants.h state.h error.h
 ALL_FILES=$(C_FILES) $(H_FILES)
 

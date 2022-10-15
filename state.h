@@ -3,14 +3,19 @@
 
 #include "vector.h"
 
-typedef enum {
-  WASH_BAY_INITIAL,
-  WASH_BAY_WAITING_FOR_CUSTOMER,
-  WASH_BAY_WASHING_CAR,
-  WASH_BAY_FINISHED_WASHING,
-  WASH_BAY_READY_FOR_NEW_CUSTOMER,
-  WASH_BAY_WASHING_BEFORE_PROGRAM_SELECTED,
-} wash_bay_state_t;
+#define GENERATE_ENUM(ENUM) ENUM,
+#define GENERATE_STRING(STRING) #STRING,
+
+#define FOREACH_WASH_BAY_STATE(F)                                              \
+  F(WASH_BAY_INITIAL)                                                          \
+  F(WASH_BAY_WAITING_FOR_CUSTOMER)                                             \
+  F(WASH_BAY_WASHING_CAR)                                                      \
+  F(WASH_BAY_FINISHED_WASHING)                                                 \
+  F(WASH_BAY_READY_FOR_NEW_CUSTOMER)                                           \
+  F(WASH_BAY_WASHING_BEFORE_PROGRAM_SELECTED)
+
+typedef enum { FOREACH_WASH_BAY_STATE(GENERATE_ENUM) } wash_bay_state_t;
+const char* washbayStateToString(wash_bay_state_t state);
 
 typedef struct {
   size_t id;
@@ -18,18 +23,19 @@ typedef struct {
   size_t customer;
 } wash_bay_t;
 
-typedef enum {
-  CUSTOMER_INITIAL,
-  CUSTOMER_LOOKING_FOR_FREE_WASH_BAY,
-  CUSTOMER_FOUND_FREE_WASH_BAY,
-  CUSTOMER_SELECT_WASHING_PROGRAM,
-  CUSTOMER_LEAVES_WASH_BAY,
-  CUSTOMER_GOES_TO_VACUUM_STATION,
-  CUSTOMER_VACUUMS_CAR,
-  CUSTOMER_LEFT_VACUUM_STATION,
-  CUSTOMER_TRIES_TO_DRIVE_IN_USED_WASH_BAY,
-  CUSTOMER_NOT_OWN_CAR_IN_WASH_BAY,
-} customer_state_t;
+#define FOREACH_CUSTOMER_STATE(F)                                              \
+  F(CUSTOMER_INITIAL)                                                          \
+  F(CUSTOMER_LOOKING_FOR_FREE_WASH_BAY)                                        \
+  F(CUSTOMER_FOUND_FREE_WASH_BAY)                                              \
+  F(CUSTOMER_SELECT_WASHING_PROGRAM)                                           \
+  F(CUSTOMER_LEAVES_WASH_BAY)                                                  \
+  F(CUSTOMER_GOES_TO_VACUUM_STATION)                                           \
+  F(CUSTOMER_VACUUMS_CAR)                                                      \
+  F(CUSTOMER_LEFT_VACUUM_STATION)                                              \
+  F(CUSTOMER_TRIES_TO_DRIVE_IN_USED_WASH_BAY)                                  \
+  F(CUSTOMER_NOT_OWN_CAR_IN_WASH_BAY)
+typedef enum { FOREACH_CUSTOMER_STATE(GENERATE_ENUM) } customer_state_t;
+const char* customerStateToString(customer_state_t state);
 
 typedef struct {
   size_t id;
@@ -37,11 +43,13 @@ typedef struct {
   size_t wash_bay;
 } customer_t;
 
-typedef enum {
-  EMPLOYEE_INITIAL,
-  EMPLOYEE_CHECKING_WASH_BAYS,
-  EMPLOYEE_HAS_NOTHING_TO_DO,
-} employee_state_t;
+#define FOREACH_EMPLOYEE_STATE(F)                                              \
+  F(EMPLOYEE_INITIAL)                                                          \
+  F(EMPLOYEE_CHECKING_WASH_BAYS)                                               \
+  F(EMPLOYEE_HAS_NOTHING_TO_DO)
+
+typedef enum { FOREACH_EMPLOYEE_STATE(GENERATE_ENUM) } employee_state_t;
+const char* employeeStateToString(employee_state_t state);
 
 typedef struct {
   size_t id;

@@ -34,7 +34,7 @@ int substr(char** line, char* substr) {
     return 0;
 }
 
-void parseLine(char* line, event_t* event, vector_t* errors) {
+void parseLine(char* line, event_t* event, vector_t* errors, size_t line_num) {
   char* lineOrig = line;
   error_t* error;
   if (!strcmp(line, "CAR WASH PARK OPENED!\n")) {
@@ -105,7 +105,8 @@ void parseLine(char* line, event_t* event, vector_t* errors) {
   err:
     error = vector_emplace_back(error_t, errors);
     error->type = ERROR_PARSING;
-    error->line = lineOrig;
+    error->message = lineOrig;
+    error->line_num = line_num;
   }
 }
 
@@ -167,17 +168,19 @@ void checkFile(FILE* file, job_t* job) {
   char logFile[FILE_NAME_LIMIT];
   snprintf(logFile, FILE_NAME_LIMIT, "logs/%06zu.log", job->number);
   FILE* log = fopen(logFile, "w");
+  size_t line_num = 0;
 
   while ((nread = getline(&line, &len, file)) != -1) {
     event_t event;
+    line_num++;
     fputs(line, log);
-    parseLine(line, &event, errors);
+    parseLine(line, &event, errors, line_num);
     if (!vector_is_empty(error_t, errors)) {
       job->result->result = FAIL;
       line = NULL;
       break;
     }
-    checkEvent(&state, &event, errors);
+    checkEvent(&state, &event, errors, line_num);
     if (!vector_is_empty(error_t, errors)) {
       job->result->result = FAIL;
       break;
@@ -221,10 +224,7 @@ void runJob(worker_t* worker, job_t* job) {
   }
   close(fd[1]);
   FILE* file = fdopen(fd[0], "r");
-  if (!file) {
-    printf("ERROR\n");
-  }
-  /* freopen("log", "w", file); */
+  assert (file != NULL);
   checkFile(file, job);
   waitpid(pid, &result->exit_status, 0);
   if (!WIFEXITED(result->exit_status) && WEXITSTATUS(result->exit_status)) {
@@ -234,6 +234,12 @@ void runJob(worker_t* worker, job_t* job) {
 
 void printResult(job_t* job, int verbose) {
   result_t* result = job->result;
+  error_t* it = vector_start(error_t, &result->errors);
+  error_t* end = vector_end(error_t, &result->errors);
+  for(; it != end; ++it){
+    printError(it, job->number);
+    error_destroy(it);
+  }
   if (WIFEXITED(result->exit_status) && WEXITSTATUS(result->exit_status) == 0) {
     if (verbose) {
       printf("[ \x1B[1;32mOK\x1B[0m ] %zu exited normally.\n", job->number);

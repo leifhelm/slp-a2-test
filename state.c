@@ -1,6 +1,23 @@
 #include "state.h"
 #include "vector.h"
 
+const char* washbayStateToString(wash_bay_state_t state) {
+  static const char* WASH_BAY_STATE_STR[] = {
+      FOREACH_WASH_BAY_STATE(GENERATE_STRING)};
+  return WASH_BAY_STATE_STR[state];
+}
+
+const char* customerStateToString(customer_state_t state) {
+  static const char* CUSTOMER_STATE_STR[] = {
+      FOREACH_CUSTOMER_STATE(GENERATE_STRING)};
+  return CUSTOMER_STATE_STR[state];
+}
+const char* employeeStateToString(employee_state_t state) {
+  static const char* EMPLOYEE_STATE_STR[] = {
+      FOREACH_EMPLOYEE_STATE(GENERATE_STRING)};
+  return EMPLOYEE_STATE_STR[state];
+}
+
 void state_init(state_t* state, size_t num_employees, size_t num_customers,
                 size_t num_wash_bays) {
   state->carwash_opened = 0;
