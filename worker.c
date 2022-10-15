@@ -224,7 +224,7 @@ void runJob(worker_t* worker, job_t* job) {
   }
   close(fd[1]);
   FILE* file = fdopen(fd[0], "r");
-  assert (file != NULL);
+  assert(file != NULL);
   checkFile(file, job);
   waitpid(pid, &result->exit_status, 0);
   if (!WIFEXITED(result->exit_status) && WEXITSTATUS(result->exit_status)) {
@@ -236,7 +236,7 @@ void printResult(job_t* job, int verbose) {
   result_t* result = job->result;
   error_t* it = vector_start(error_t, &result->errors);
   error_t* end = vector_end(error_t, &result->errors);
-  for(; it != end; ++it){
+  for (; it != end; ++it) {
     printError(it, job->number);
     error_destroy(it);
   }
