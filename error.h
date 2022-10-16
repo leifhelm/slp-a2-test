@@ -10,6 +10,7 @@
   F(ERROR_ACTIVITY_BEFORE_OPEN, "activity before carwash is open")             \
   F(ERROR_PARSING, "parsing error")                                            \
   F(ERROR_INVALID_TRANSITION, "invalid transition")                            \
+  F(ERROR_SYNCHRONIZATION, "improper synchronization")                         \
   F(ERROR_CARWASH_NOT_CLOSED, "carwash is not closed in the end")
 
 typedef enum { FOREACH_ERROR_TYPE(ENUM_AND_STRING_ENUM) } error_type_t;

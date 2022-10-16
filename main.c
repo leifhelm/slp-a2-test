@@ -194,5 +194,6 @@ int main(int argc, char* argv[]) {
   } else {
     printf("Ran %zu tests with \x1B[1;31m%zu\x1B[0m failures.\n", queue->size,
            failed);
+    return EXIT_FAILURE;
   }
 }

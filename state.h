@@ -61,6 +61,7 @@ typedef struct {
   vector_t wash_bays;
   vector_t customers;
   vector_t employees;
+  size_t free_vacuum_stations;
 } state_t;
 
 typedef enum {
@@ -84,5 +85,7 @@ typedef struct {
 void state_init(state_t* state, size_t num_employees, size_t num_customers,
                 size_t num_wash_bays);
 void state_destroy(state_t* state);
+
+void state_transition(state_t* state, event_t* event);
 
 #endif // STATE_H_

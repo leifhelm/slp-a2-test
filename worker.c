@@ -110,51 +110,6 @@ void parseLine(char* line, event_t* event, vector_t* errors, size_t line_num) {
   }
 }
 
-void stateTransition(state_t* state, event_t* event) {
-  wash_bay_t* wash_bay;
-  customer_t* customer;
-  employee_t* employee;
-  switch (event->type) {
-  case EVENT_OPEN:
-    state->carwash_opened = 1;
-    break;
-  case EVENT_CLOSE:
-    state->carwash_opened = 0;
-    break;
-  case EVENT_WASH_BAY:
-    wash_bay = vector_get(wash_bay_t, &state->wash_bays, event->wash_bay);
-    wash_bay->state = event->wash_bay_state;
-    switch (event->wash_bay_state) {
-    case WASH_BAY_FINISHED_WASHING:
-    case WASH_BAY_WASHING_CAR:
-      wash_bay->customer = event->customer;
-      break;
-    default:
-      break;
-    }
-    break;
-  case EVENT_CUSTOMER:
-    customer = vector_get(customer_t, &state->customers, event->customer);
-    customer->state = event->customer_state;
-    switch (event->customer_state) {
-    case CUSTOMER_FOUND_FREE_WASH_BAY:
-      customer->wash_bay = event->wash_bay;
-      break;
-    case CUSTOMER_LEAVES_WASH_BAY:
-      vector_get(wash_bay_t, &state->wash_bays, customer->wash_bay)->customer =
-          -1;
-      break;
-    default:
-      break;
-    }
-    break;
-  case EVENT_EMPLOYEE:
-    employee = vector_get(employee_t, &state->employees, event->employee);
-    employee->state = event->employee_state;
-    break;
-  }
-}
-
 #define FILE_NAME_LIMIT 32
 
 void checkFile(FILE* file, job_t* job) {
@@ -185,14 +140,16 @@ void checkFile(FILE* file, job_t* job) {
       job->result->result = FAIL;
       break;
     }
-    stateTransition(&state, &event);
+    state_transition(&state, &event);
   }
   while ((nread = getline(&line, &len, file)) != -1) {
     fputs(line, log);
   }
-  checkFinalState(&state, errors);
-  if (!vector_is_empty(error_t, errors)) {
-    job->result->result = FAIL;
+  if (vector_is_empty(error_t, errors)) {
+    checkFinalState(&state, errors);
+    if (!vector_is_empty(error_t, errors)) {
+      job->result->result = FAIL;
+    }
   }
   free(line);
   state_destroy(&state);
