@@ -22,6 +22,7 @@ void state_init(state_t* state, size_t num_employees, size_t num_customers,
                 size_t num_wash_bays) {
   state->carwash_opened = 0;
   state->free_vacuum_stations = 2;
+  vector_init(maintenance_event_t, &state->maintenance_log);
   vector_init_with_capacity(wash_bay_t, &state->wash_bays, num_wash_bays);
   vector_init_with_capacity(customer_t, &state->customers, num_customers);
   vector_init_with_capacity(employee_t, &state->employees, num_employees);
@@ -48,12 +49,29 @@ void state_destroy(state_t* state) {
   vector_free(wash_bay_t, &state->wash_bays);
   vector_free(customer_t, &state->customers);
   vector_free(employee_t, &state->employees);
+  vector_free(maintenance_event_t, &state->maintenance_log);
+}
+
+void updateMaintenanceLog(vector_t* maintenance_log, size_t employee) {
+  maintenance_event_t* it = vector_end(maintenance_event_t, maintenance_log);
+  maintenance_event_t* start =
+      vector_start(maintenance_event_t, maintenance_log);
+  while (it-- != start) {
+    if (it->type == MAINTENANCE_CHECKING && it->employee == employee) {
+      it->type = MAINTENANCE_DECREASE;
+      return;
+    } else if (it->type == MAINTENANCE_NOTHING_TO_DO &&
+               it->employee == employee) {
+      return;
+    }
+  }
 }
 
 void state_transition(state_t* state, event_t* event) {
   wash_bay_t* wash_bay;
   customer_t* customer;
   employee_t* employee;
+  maintenance_event_t* maintenance_event;
   switch (event->type) {
   case EVENT_OPEN:
     state->carwash_opened = 1;
@@ -85,6 +103,10 @@ void state_transition(state_t* state, event_t* event) {
     case CUSTOMER_LEAVES_WASH_BAY:
       vector_get(wash_bay_t, &state->wash_bays, customer->wash_bay)->customer =
           -1;
+      maintenance_event =
+          vector_emplace_back(maintenance_event_t, &state->maintenance_log);
+      maintenance_event->type = MAINTENANCE_INCREASE;
+      maintenance_event->employee = -1;
       break;
     case CUSTOMER_GOES_TO_VACUUM_STATION:
       state->free_vacuum_stations--;
@@ -99,6 +121,23 @@ void state_transition(state_t* state, event_t* event) {
   case EVENT_EMPLOYEE:
     employee = vector_get(employee_t, &state->employees, event->employee);
     employee->state = event->employee_state;
+    if (event->employee_state == EMPLOYEE_CHECKING_WASH_BAYS) {
+      updateMaintenanceLog(&state->maintenance_log, employee->id);
+    }
+    maintenance_event =
+        vector_emplace_back(maintenance_event_t, &state->maintenance_log);
+    maintenance_event->employee = employee->id;
+    maintenance_event->line_num = event->line_num;
+    switch (event->employee_state) {
+    case EMPLOYEE_CHECKING_WASH_BAYS:
+      maintenance_event->type = MAINTENANCE_CHECKING;
+      break;
+    case EMPLOYEE_HAS_NOTHING_TO_DO:
+      maintenance_event->type = MAINTENANCE_NOTHING_TO_DO;
+      break;
+    case EMPLOYEE_INITIAL: // Impossible
+      break;
+    }
     break;
   }
 }

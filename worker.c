@@ -37,6 +37,7 @@ int substr(char** line, char* substr) {
 void parseLine(char* line, event_t* event, vector_t* errors, size_t line_num) {
   char* lineOrig = line;
   error_t* error;
+  event->line_num = line_num;
   if (!strcmp(line, "CAR WASH PARK OPENED!\n")) {
     event->type = EVENT_OPEN;
   } else if (!strcmp(line, "CAR WASH PARK CLOSED!\n")) {
@@ -135,7 +136,7 @@ void checkFile(FILE* file, job_t* job) {
       line = NULL;
       break;
     }
-    checkEvent(&state, &event, errors, line_num);
+    checkEvent(&state, &event, errors);
     if (!vector_is_empty(error_t, errors)) {
       job->result->result = FAIL;
       break;

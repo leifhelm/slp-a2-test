@@ -56,12 +56,26 @@ typedef struct {
   employee_state_t state;
 } employee_t;
 
+typedef enum {
+  MAINTENANCE_INCREASE,
+  MAINTENANCE_CHECKING,
+  MAINTENANCE_NOTHING_TO_DO,
+  MAINTENANCE_DECREASE
+} maintenance_event_type_t;
+
+typedef struct {
+  maintenance_event_type_t type;
+  size_t employee;
+  size_t line_num;
+} maintenance_event_t;
+
 typedef struct {
   int carwash_opened;
   vector_t wash_bays;
   vector_t customers;
   vector_t employees;
   size_t free_vacuum_stations;
+  vector_t maintenance_log;
 } state_t;
 
 typedef enum {
@@ -80,6 +94,7 @@ typedef struct {
   size_t wash_bay;
   size_t customer;
   size_t employee;
+  size_t line_num;
 } event_t;
 
 void state_init(state_t* state, size_t num_employees, size_t num_customers,

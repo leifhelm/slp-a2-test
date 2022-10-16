@@ -5,8 +5,7 @@
 #include <stdio.h>
 
 #define ENUM_LENGTH 32
-void checkInvalidTransition(state_t* state, event_t* event, vector_t* errors,
-                            size_t line_num) {
+void checkInvalidTransition(state_t* state, event_t* event, vector_t* errors) {
   char* message;
   error_t* error;
 
@@ -129,12 +128,11 @@ from_to_error:
 error:
   error = vector_emplace_back(error_t, errors);
   error->message = message;
-  error->line_num = line_num;
+  error->line_num = event->line_num;
   error->type = ERROR_INVALID_TRANSITION;
 }
 
-void checkSynchronization(state_t* state, event_t* event, vector_t* errors,
-                          size_t line_num) {
+void checkSynchronization(state_t* state, event_t* event, vector_t* errors) {
   char* message;
   error_t* error;
   error_type_t type;
@@ -311,16 +309,15 @@ error:
   error = vector_emplace_back(error_t, errors);
   error->type = type;
   error->message = message;
-  error->line_num = line_num;
+  error->line_num = event->line_num;
 }
 
-void checkEvent(state_t* state, event_t* event, vector_t* errors,
-                size_t line_num) {
-  checkInvalidTransition(state, event, errors, line_num);
+void checkEvent(state_t* state, event_t* event, vector_t* errors) {
+  checkInvalidTransition(state, event, errors);
   if (!vector_is_empty(error_t, errors)) {
     return;
   }
-  checkSynchronization(state, event, errors, line_num);
+  checkSynchronization(state, event, errors);
 }
 
 void checkFinalState(state_t* state, vector_t* errors) {
@@ -330,4 +327,34 @@ void checkFinalState(state_t* state, vector_t* errors) {
     error->message = NULL;
     error->line_num = -1;
   }
+  size_t max_wash_bays_needing_maintenance = 0;
+  maintenance_event_t* event =
+      vector_start(maintenance_event_t, &state->maintenance_log);
+  maintenance_event_t* end =
+      vector_end(maintenance_event_t, &state->maintenance_log);
+  for (; event != end; ++event) {
+    switch (event->type) {
+    case MAINTENANCE_INCREASE:
+      max_wash_bays_needing_maintenance++;
+      break;
+    case MAINTENANCE_DECREASE:
+      if (max_wash_bays_needing_maintenance == 0) {
+        error_t* error = vector_emplace_back(error_t, errors);
+        error->type = ERROR_SYNCHRONIZATION;
+        asprintf(&error->message,
+                 "Employee %zu does maintenance but no washbay needs it.\n",
+                 event->employee);
+        error->line_num = event->line_num;
+        goto next;
+      }
+      max_wash_bays_needing_maintenance--;
+      break;
+    case MAINTENANCE_NOTHING_TO_DO:
+      max_wash_bays_needing_maintenance = 0;
+      break;
+    case MAINTENANCE_CHECKING:
+      break;
+    }
+  }
+next:;
 }
