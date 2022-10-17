@@ -229,8 +229,16 @@ void checkSynchronization(state_t* state, event_t* event, vector_t* errors) {
                  wash_bay->id, wash_bay->customer);
         goto sync_error;
       }
-      if (wash_bay->state != WASH_BAY_WAITING_FOR_CUSTOMER) {
-        goto wash_bay_not_waiting_for_customer_error;
+      if (wash_bay->state != WASH_BAY_WAITING_FOR_CUSTOMER &&
+          wash_bay->state != WASH_BAY_INITIAL) {
+  asprintf(&message,
+           "Customer %zu in state %s expects that washbay %zu is in "
+           "state %s or %s but was in state %s.\n",
+           customer->id, customerStateToString(event->customer_state),
+           wash_bay->id, washbayStateToString(WASH_BAY_WAITING_FOR_CUSTOMER),
+           washbayStateToString(WASH_BAY_INITIAL),
+           washbayStateToString(wash_bay->state));
+        goto sync_error;
       }
       // Fall through
     case CUSTOMER_LOOKING_FOR_FREE_WASH_BAY:
@@ -245,8 +253,17 @@ void checkSynchronization(state_t* state, event_t* event, vector_t* errors) {
       break;
     case CUSTOMER_SELECT_WASHING_PROGRAM:
       wash_bay = vector_get(wash_bay_t, &state->wash_bays, customer->wash_bay);
-      if (wash_bay->state != WASH_BAY_WAITING_FOR_CUSTOMER) {
-        goto wash_bay_not_waiting_for_customer_error;
+      if (wash_bay->state != WASH_BAY_WAITING_FOR_CUSTOMER && wash_bay->state != WASH_BAY_READY_FOR_NEW_CUSTOMER && wash_bay->state != WASH_BAY_INITIAL) {
+        asprintf(&message,
+                 "Customer %zu in state %s expects that washbay %zu is in "
+                 "state %s, %s or %s but was in state %s.\n",
+                 customer->id, customerStateToString(event->customer_state),
+                 wash_bay->id,
+                 washbayStateToString(WASH_BAY_WAITING_FOR_CUSTOMER),
+                 washbayStateToString(WASH_BAY_READY_FOR_NEW_CUSTOMER),
+                 washbayStateToString(WASH_BAY_INITIAL),
+                 washbayStateToString(wash_bay->state));
+        goto sync_error;
       }
       if (wash_bay->customer != customer->id) {
         asprintf(&message,
@@ -272,8 +289,8 @@ void checkSynchronization(state_t* state, event_t* event, vector_t* errors) {
     case CUSTOMER_GOES_TO_VACUUM_STATION:
       if (state->free_vacuum_stations == 0) {
         asprintf(&message,
-                 "Customer %zu in state %s expects there to be a vaccum "
-                 "station to be avaiable.\n",
+                 "Customer %zu in state %s expects that a vacuum station is "
+                 "available.\n",
                  customer->id, customerStateToString(event->customer_state));
         goto sync_error;
       }
@@ -296,15 +313,6 @@ open_error:
 sync_error:
   type = ERROR_SYNCHRONIZATION;
   goto error;
-wash_bay_not_waiting_for_customer_error:
-  asprintf(&message,
-           "Customer %zu in state %s expects that washbay %zu is in "
-           "state %s but was in state %s.\n",
-           customer->id, customerStateToString(event->customer_state),
-           wash_bay->id, washbayStateToString(WASH_BAY_WAITING_FOR_CUSTOMER),
-           washbayStateToString(wash_bay->state));
-
-  goto sync_error;
 error:
   error = vector_emplace_back(error_t, errors);
   error->type = type;
@@ -327,34 +335,4 @@ void checkFinalState(state_t* state, vector_t* errors) {
     error->message = NULL;
     error->line_num = -1;
   }
-  size_t max_wash_bays_needing_maintenance = 0;
-  maintenance_event_t* event =
-      vector_start(maintenance_event_t, &state->maintenance_log);
-  maintenance_event_t* end =
-      vector_end(maintenance_event_t, &state->maintenance_log);
-  for (; event != end; ++event) {
-    switch (event->type) {
-    case MAINTENANCE_INCREASE:
-      max_wash_bays_needing_maintenance++;
-      break;
-    case MAINTENANCE_DECREASE:
-      if (max_wash_bays_needing_maintenance == 0) {
-        error_t* error = vector_emplace_back(error_t, errors);
-        error->type = ERROR_SYNCHRONIZATION;
-        asprintf(&error->message,
-                 "Employee %zu does maintenance but no washbay needs it.\n",
-                 event->employee);
-        error->line_num = event->line_num;
-        goto next;
-      }
-      max_wash_bays_needing_maintenance--;
-      break;
-    case MAINTENANCE_NOTHING_TO_DO:
-      max_wash_bays_needing_maintenance = 0;
-      break;
-    case MAINTENANCE_CHECKING:
-      break;
-    }
-  }
-next:;
 }
