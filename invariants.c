@@ -40,7 +40,8 @@ void checkInvalidTransition(state_t* state, event_t* event, vector_t* errors) {
     switch (event->wash_bay_state) {
     case WASH_BAY_WAITING_FOR_CUSTOMER:
       if (wash_bay->state != WASH_BAY_INITIAL &&
-          wash_bay->state != WASH_BAY_READY_FOR_NEW_CUSTOMER)
+          wash_bay->state != WASH_BAY_READY_FOR_NEW_CUSTOMER &&
+          wash_bay->state != WASH_BAY_FINISHED_WASHING)
         goto from_to_error;
       break;
     case WASH_BAY_WASHING_BEFORE_PROGRAM_SELECTED:
@@ -179,15 +180,8 @@ void checkSynchronization(state_t* state, event_t* event, vector_t* errors) {
     wash_bay = vector_get(wash_bay_t, &state->wash_bays, event->wash_bay);
     switch (event->wash_bay_state) {
     case WASH_BAY_WAITING_FOR_CUSTOMER:
+      break;
     case WASH_BAY_READY_FOR_NEW_CUSTOMER:
-      if (wash_bay->customer != -1) {
-        asprintf(&message,
-                 "Washbay %zu in state %s expects that no customer in the bay, "
-                 "but was customer %zu was in there.\n",
-                 wash_bay->id, washbayStateToString(event->wash_bay_state),
-                 wash_bay->customer);
-        goto sync_error;
-      }
       break;
     case WASH_BAY_WASHING_CAR:
     case WASH_BAY_FINISHED_WASHING:
@@ -230,14 +224,19 @@ void checkSynchronization(state_t* state, event_t* event, vector_t* errors) {
         goto sync_error;
       }
       if (wash_bay->state != WASH_BAY_WAITING_FOR_CUSTOMER &&
-          wash_bay->state != WASH_BAY_INITIAL) {
-  asprintf(&message,
-           "Customer %zu in state %s expects that washbay %zu is in "
-           "state %s or %s but was in state %s.\n",
-           customer->id, customerStateToString(event->customer_state),
-           wash_bay->id, washbayStateToString(WASH_BAY_WAITING_FOR_CUSTOMER),
-           washbayStateToString(WASH_BAY_INITIAL),
-           washbayStateToString(wash_bay->state));
+          wash_bay->state != WASH_BAY_READY_FOR_NEW_CUSTOMER &&
+          wash_bay->state != WASH_BAY_INITIAL &&
+          wash_bay->state != WASH_BAY_FINISHED_WASHING) {
+        asprintf(&message,
+                 "Customer %zu in state %s expects that washbay %zu is in "
+                 "state %s, %s, %s or %s but was in state %s.\n",
+                 customer->id, customerStateToString(event->customer_state),
+                 wash_bay->id,
+                 washbayStateToString(WASH_BAY_WAITING_FOR_CUSTOMER),
+                 washbayStateToString(WASH_BAY_READY_FOR_NEW_CUSTOMER),
+                 washbayStateToString(WASH_BAY_INITIAL),
+                 washbayStateToString(WASH_BAY_FINISHED_WASHING),
+                 washbayStateToString(wash_bay->state));
         goto sync_error;
       }
       // Fall through
@@ -253,15 +252,19 @@ void checkSynchronization(state_t* state, event_t* event, vector_t* errors) {
       break;
     case CUSTOMER_SELECT_WASHING_PROGRAM:
       wash_bay = vector_get(wash_bay_t, &state->wash_bays, customer->wash_bay);
-      if (wash_bay->state != WASH_BAY_WAITING_FOR_CUSTOMER && wash_bay->state != WASH_BAY_READY_FOR_NEW_CUSTOMER && wash_bay->state != WASH_BAY_INITIAL) {
+      if (wash_bay->state != WASH_BAY_WAITING_FOR_CUSTOMER &&
+          wash_bay->state != WASH_BAY_READY_FOR_NEW_CUSTOMER &&
+          wash_bay->state != WASH_BAY_INITIAL &&
+          wash_bay->state != WASH_BAY_FINISHED_WASHING) {
         asprintf(&message,
                  "Customer %zu in state %s expects that washbay %zu is in "
-                 "state %s, %s or %s but was in state %s.\n",
+                 "state %s, %s, %s or %s but was in state %s.\n",
                  customer->id, customerStateToString(event->customer_state),
                  wash_bay->id,
                  washbayStateToString(WASH_BAY_WAITING_FOR_CUSTOMER),
                  washbayStateToString(WASH_BAY_READY_FOR_NEW_CUSTOMER),
                  washbayStateToString(WASH_BAY_INITIAL),
+                 washbayStateToString(WASH_BAY_FINISHED_WASHING),
                  washbayStateToString(wash_bay->state));
         goto sync_error;
       }
@@ -335,4 +338,35 @@ void checkFinalState(state_t* state, vector_t* errors) {
     error->message = NULL;
     error->line_num = -1;
   }
+  /*   size_t max_wash_bays_needing_maintenance = 0; */
+  /*   maintenance_event_t* event = */
+  /*       vector_start(maintenance_event_t, &state->maintenance_log); */
+  /*   maintenance_event_t* end = */
+  /*       vector_end(maintenance_event_t, &state->maintenance_log); */
+  /*   for (; event != end; ++event) { */
+  /*     switch (event->type) { */
+  /*     case MAINTENANCE_INCREASE: */
+  /*       max_wash_bays_needing_maintenance++; */
+  /*       break; */
+  /*     case MAINTENANCE_DECREASE: */
+  /*       if (max_wash_bays_needing_maintenance == 0) { */
+  /*         error_t* error = vector_emplace_back(error_t, errors); */
+  /*         error->type = ERROR_SYNCHRONIZATION; */
+  /*         asprintf(&error->message, */
+  /*                  "Employee %zu does maintenance but no washbay needs
+   * it.\n", */
+  /*                  event->employee); */
+  /*         error->line_num = event->line_num; */
+  /*         goto next; */
+  /*       } */
+  /*       max_wash_bays_needing_maintenance--; */
+  /*       break; */
+  /*     case MAINTENANCE_NOTHING_TO_DO: */
+  /*       max_wash_bays_needing_maintenance = 0; */
+  /*       break; */
+  /*     case MAINTENANCE_CHECKING: */
+  /*       break; */
+  /*     } */
+  /*   } */
+  /* next:; */
 }
